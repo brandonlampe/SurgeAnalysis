@@ -3,10 +3,12 @@
 	Content includes:
 		def valprint(string, value): function for printing numeric values with a label
 		def matprint(string, value): function for printing arrays with a label
+        def valvePercOpen
 		class SS_DeltaH(): general function class for calcuation SS pressure loss
 """
 
 import numpy as np
+from scipy.interpolate import interp1d
 
 def valprint(string, value):
     """ Ensure uniform formatting of scalar value outputs. """
@@ -16,6 +18,31 @@ def matprint(string, value):
     """ Ensure uniform formatting of matrix value outputs. """
     print("{0}:".format(string))
     print(value)
+
+def valvePercOpen(t, Tc):
+    """ 
+    Interpolation function to determine the percentage of valve open
+    Input:
+    t: current time (sec)
+    Tc: total time needed for valve to close (sec)
+    y: points along closure curves (currently assumed)
+        - relates actual actual percent open to the effective percent open
+
+    Output:
+    tau: effective percent open
+        for t >= Tc -> tau = 0, fully closed
+        for t = 0 -> tau = 1, fully open
+    """
+    y = np.array([1., .9, .7, .5, .3, .1, 0.]) # fraction open over value closure time
+    tc = np.linspace(0,Tc, len(y))
+    tau_out = np.zeros(len(t))
+    for i in xrange(len(t)):
+        if t[i] >= Tc:
+            tau_out[i] = 0.0
+        else:
+            tau = interp1d(tc, y, kind = 'cubic')
+            tau_out[i] = tau(t[i])
+    return tau_out
 
 class SS_DeltaH():
     """ Doc String for General Class should go here"""
