@@ -29,19 +29,21 @@ def valvePercOpen(t, Tc):
         - relates actual actual percent open to the effective percent open
 
     Output:
-    tau: effective percent open
+    tau: relative valve opening
         for t >= Tc -> tau = 0, fully closed
         for t = 0 -> tau = 1, fully open
+
+        \tau = \frac{Cd * Av}{Cd_0 * Av_0}
     """
     y = np.array([1., .9, .7, .5, .3, .1, 0.]) # fraction open over value closure time
     tc = np.linspace(0,Tc, len(y))
-    tau_out = np.zeros(len(t))
-    for i in xrange(len(t)):
-        if t[i] >= Tc:
-            tau_out[i] = 0.0
-        else:
-            tau = interp1d(tc, y, kind = 'cubic')
-            tau_out[i] = tau(t[i])
+    # tau_out = np.zeros(len(t))
+    # for i in xrange(len(t)):
+    if t >= Tc:
+        tau_out = 0.0
+    else:
+        tau = interp1d(tc, y, kind = 'cubic')
+        tau_out = tau(t)
     return tau_out
 
 class SS_DeltaH():
