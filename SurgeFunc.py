@@ -9,6 +9,7 @@
 
 import numpy as np
 from scipy.interpolate import interp1d
+from numba import jit
 
 def valprint(string, value):
     """ Ensure uniform formatting of scalar value outputs. """
@@ -19,32 +20,123 @@ def matprint(string, value):
     print("{0}:".format(string))
     print(value)
 
-def valvePercOpen(t, Tc):
-    """ 
-    Interpolation function to determine the percentage of valve open
-    Input:
-    t: current time (sec)
-    Tc: total time needed for valve to close (sec)
-    y: points along closure curves (currently assumed)
-        - relates actual actual percent open to the effective percent open
-
-    Output:
-    tau: relative valve opening
-        for t >= Tc -> tau = 0, fully closed
-        for t = 0 -> tau = 1, fully open
-
-        \tau = \frac{Cd * Av}{Cd_0 * Av_0}
+@jit(["float32(float32, float32, float32, float32, float32, int32)"], nopython=True)
+def FrictionFact_jit(flowRate, mu, spGrav, ID, roughness, units = 0):
     """
-    y = np.array([1., .9, .7, .5, .3, .1, 0.]) # fraction open over value closure time
-    tc = np.linspace(0,Tc, len(y))
-    # tau_out = np.zeros(len(t))
-    # for i in xrange(len(t)):
-    if t >= Tc:
-        tau_out = 0.0
+        All calculations will be performed in consistent SI units.  
+        Therefore, if units are input in US terms (units=0), they will be converted to SI for calculation.
+
+        Units for Input (must maintain a constant system of units):
+
+                  |   DESCRIPTION      | SI   |
+        units     |system of units     | !=0  |
+        ------------------------------------------------
+        flowRate  |volumetric flow rate|m3/sec|
+        dynVisc   |dynamic viscosity   |Pa-s  |
+        spGrav    |specific gravity    |none  |
+        ID        |internal diameter   |m     |
+        roughness |pipe roughness      |m     |
+
+        Output:
+        -------------------------------------------------
+        f: darcy-weisbach friction factor (dimensionless)
+    """
+    rho = spGrav * 1000. # kg/m3
+    area = np.pi * ID **2 / 4.# m2
+    v = flowRate/area # velocity (m/sec)
+    Re = rho * v * ID / mu #reynolds number
+    Re_lim = 2000. #transition point between laminara and turbulent flow
+    f_lim = Re_lim / 64. #maximum friction factor value occurs at Re_lim/64
+    trans = 0.75 #transition range (region of smooth transition)
+    Re_trans = Re_lim*(1+trans) # the transitional zone
+    n = 1.0 #shape factor for lower side of transition (Re < 2000)
+    slope = 10. #shape factor for upper side of transition (Re > 2000)
+    
+    if Re <= Re_lim:
+        f = f_lim * np.sin((np.pi / 2. * (Re / Re_lim))**n)
+        
+    elif Re > Re_lim and Re <= Re_trans: 
+        # transition between laminar and turbulent flow
+        sqrt_f_trans = 10.0 # initial guess
+        loop_max = 20 # max. number of loops
+        inc = 1 # increment count
+        res = 10.0 # initial value
+        while res > 10**-8 and inc < loop_max:
+            LHS = -2.0 * np.log10(roughness / (3.7 * ID) + 2.51 / (Re_trans * sqrt_f_trans))
+            res = (LHS - 1./sqrt_f_trans)**2 #squared error
+            sqrt_f_trans = 1./LHS
+            inc = inc + 1
+        f_trans = sqrt_f_trans**2
+        Re_star = (Re - Re_lim) / Re_lim
+        f = f_trans + (f_lim - f_trans)*(1. + slope * Re_star) * np.exp(-slope * Re_star)
+                                       
     else:
-        tau = interp1d(tc, y, kind = 'cubic')
-        tau_out = tau(t)
-    return tau_out
+        sqrt_f = 10.0 # initial guess
+        loop_max = 20 # max. number of loops
+        inc = 1 # increment count
+        res = 10.0 # initial value
+
+        while res > 10**-8 and inc < loop_max:
+            LHS = -2.0 * np.log10(roughness / (3.7 * ID) + 2.51 / (Re * sqrt_f))
+            res = (LHS - 1./sqrt_f)**2 #squared error
+            sqrt_f = 1./LHS
+            inc = inc + 1
+        f = sqrt_f**2
+        
+    return f
+
+@jit
+def MethodChar01_jit(x, t, q0_arr, h0_arr, p0_arr, ca, cf, cb, idx, sg, ID, mu, rough, s, row, col, qp, hp, h, q, p, rho, area, v, Re, f, Tc, tc, y):
+    ID = ID/1000. # convert from mm to m
+    rough = rough/1000. #convert form mm to m
+    area = np.pi * ID **2 / 4.# m2
+    
+    # define initial conditions
+    for i in range(row):
+        q[i,0] = q0_arr[i]
+        h[i,0] = h0_arr[i]
+        p[i,0] = p0_arr[i]
+    
+    # initial values at upstream reservoir
+    # neg characteristic (m3)
+    cn = q[1, 0] - ca[0]*h[1, 0] - cb - cf * q[1, 0] * np.abs(q[1, 0])
+    qp[0] = cn + ca[0]*h[0, 0]
+    
+    # interior nodes
+    for j in range(col - 1):
+        for i in range(row - 2):
+            i = i + 1 # skip first value (BCT)
+            ip1 = i + 1
+            im1 = i - 1
+            ######################## Friction Factor Calc ########################
+            f = FrictionFact_jit(q[ip1,j], mu[idx[i]], sg[idx[i]], ID, rough, units=0)
+            cf = s * f/(2*(ID)*area) #(sec/m3)
+            ########################################################################
+            cn = q[ip1, j] - ca[idx[i]]*h[ip1,j] - cb - cf*q[ip1,j]*np.abs(q[ip1,j]) # negative characteristic
+            cp = q[im1, j] + ca[idx[i]]*h[im1,j] - cb - cf*q[im1,j]*np.abs(q[im1,j]) # positive characteristic
+            qp[i] = 0.5 * (cn + cp) # flow rate at future time
+            hp[i] = (cp - qp[i])/ ca[idx[i]] # head at future time
+            if i == 1: # calculations for upstream reservoir BCTs
+                hp[0] = h[0,0] # Constant upstream reservoir head (m)
+                qp[0] = cn + ca[idx[i]]*hp[0]
+            if i == row - 2: # calculations for downstream valve BCTs
+                #interpolate valve 
+                interp = t[j]
+                if interp >= Tc:
+                    tau = 0
+                else:
+                    I = 0
+                    while interp >= tc[I]:
+                        I = I + 1
+                    frac = (interp - tc[I-1]) / (tc[I] - tc[I-1])
+                    tau = y[I-1] + frac * (y[I] - y[I-1])
+        
+                cv = (tau * q[row-1,0] * q[row-1,0]) / (ca[idx[i]] * h[row-1,0])
+                qp[i+1] = 0.5 * (-cv + ((cv*cv) + 4 * cp * cv)**(0.5))
+                hp[i+1] = (cp - qp[i])/ ca[idx[i]]
+        q[:,j+1] = qp
+        h[:,j+1] = hp
+    return q, h
 
 class SS_DeltaH():
     """ Doc String for General Class should go here"""
