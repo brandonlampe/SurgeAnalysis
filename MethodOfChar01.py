@@ -25,15 +25,15 @@ def matprint(string, value):
     print(value)
 
 # Problem Data
-TIME_CLOSE = 6.0  # SECONDS (VALVE CLOSURE DURATION)
-TIME = 45.0 # SECONDS OF ANALYSIS
-LENGTH = 11.1e3  # FEET (PIPE LENGTH)
+TIME_CLOSE = 5  # SECONDS (VALVE CLOSURE DURATION)
+TIME = 90  # SECONDS OF ANALYSIS
+LENGTH = 3.e3  # FEET (PIPE LENGTH)
 DIA = 2  # FEET (DIAMETER)
 WAVE_SPEED = 3.7E3  # FEET/SEC (SPEED OF SOUND IN FLUID)
-VEL0 = 6.0  # FEET/SEC (INITIAL FLUID VELOCITY)
-HEAD_US = 115.0  # FEET (ELEV + PRESSURE HEADS = TOTAL HEAD AT UPSTREAM DATUM)
-THETA = 0.0  # ORIENTATION OF PIPE (RADIANS: 0=HORIZ, np.pi/2=VERT)
-FRIC = 0.014  # DIMENSIONLESS DARCY-WIESBACH FRICTION FACTOR
+VEL0 = 15.0  # FEET/SEC (INITIAL FLUID VELOCITY)
+HEAD_US = 4000.0  # FEET (ELEV + PRESSURE HEADS = TOTAL HEAD AT UPSTREAM DATUM)
+THETA = np.pi/2  # ORIENTATION OF PIPE (RADIANS: 0=HORIZ, np.pi/2=VERT)
+FRIC = 0.1  # DIMENSIONLESS DARCY-WIESBACH FRICTION FACTOR
 
 # GRID SPACING
 NELEM = 4
@@ -45,11 +45,15 @@ TGRID = np.linspace(start=0, stop=TIME, num=TIME/DELT+1)  # TEMPORAL DISC
 
 # CONSTANTS
 GRAV = 32.2  # FT/SEC2
+RHO = 1.94  # SLUGS/FT3
+GAMMA = RHO * GRAV  # LB/FT3
 
 # INITIAL CONDITIONS
 HEAD_EL = np.sin(THETA)*XGRID  # ELEVATION HEAD
-HEAD_PR = HEAD_US - FRIC*XGRID/(2*DIA*GRAV)*VEL0**2  # PRESSURE HEAD
-HEAD0 = HEAD_EL + HEAD_PR  # INITIAL CONDITIONS - TOTAL HEAD
+HEAD_V = VEL0**2/(2*GRAV)  # VELOCITY HEAD
+HEAD_LS = FRIC*XGRID/(2*DIA*GRAV)*VEL0**2 # HEAD LOSS FROM FRICTION
+HEAD0 = HEAD_US - HEAD_LS  # INITIAL CONDITIONS - TOTAL HEAD
+DEPTH = HEAD_EL[::-1]
 
 # BOUNDARY CONDITIONS
 BC_US = HEAD_US  # CONSTANT HEAD AT UPSTREAM RESERVOIR
@@ -103,12 +107,37 @@ for j in xrange(TCOL):
             bpos = BTERM + RTERM*np.abs(VEL_ARR[i+1, j])
             HEAD_ARR[-1, j+1] = cpos - bpos*VEL_ARR[-1, j+1]
 
-time_plot = np.tile(TGRID, (NNODE, 1)).T
-x_plot = np.tile(XGRID, (len(HEAD_ARR[0, :]), 1)).T
+# CALCULATE PRESSURE
+ROW, COL = HEAD_ARR.shape
+PRESS = np.zeros((ROW, COL))
+for i in xrange(COL):
+    PRESS[:, i] = (HEAD_ARR[:, i] - HEAD_EL - VEL_ARR[:, i]**2/(2*GRAV))\
+                 * GAMMA/144.0
 
-# PLOT RESULTS
-fig, ax = plt.subplots(figsize=(12, 8))
-ax.plot(time_plot, HEAD_ARR.T, 'o--')
-# ax.legend(lbl, frameon=1, loc=0)
-ax.grid(True)
-plt.show()
+
+# BUILD ARRAYS FOR PLOTTING
+time_plot = np.tile(TGRID, (NNODE, 1)).T
+x_plot = np.tile(XGRID, (COL, 1)).T
+PATH = '/Users/Lampe/Documents/PB/SurgeAnalysis/Results/'
+
+LBL = [None]*ROW
+for i in xrange(ROW):
+    LBL[i] = "Depth: {:,.0f} ft".format(DEPTH[i])
+
+FIG1, AX1 = plt.subplots(figsize=(12, 8))
+AX1.plot(time_plot, VEL_ARR.T, 'o--')
+AX1.grid(True)
+AX1.set_xlabel("Time (sec)")
+AX1.set_ylabel("Fluid Velocity (ft/sec)")
+AX1.legend(LBL, frameon=1, framealpha=1, loc=0)
+FIG1_NAME = 'fig_velocity.pdf'
+# FIG1.savefig(PATH + FIG1_NAME)
+
+FIG2, AX2 = plt.subplots(figsize=(12, 8))
+AX2.plot(time_plot, PRESS.T, 'o--')
+AX2.grid(True)
+AX2.set_xlabel("Time (sec)")
+AX2.set_ylabel("Pressure (psi)")
+AX2.legend(LBL, frameon=1, framealpha=1, loc=1)
+FIG2_NAME = 'fig_head.pdf'
+# FIG2.savefig(PATH + FIG2_NAME)
