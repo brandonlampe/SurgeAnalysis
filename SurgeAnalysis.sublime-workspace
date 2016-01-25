@@ -1,0 +1,544 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"fig",
+				"figsize"
+			],
+			[
+				"HEAD_",
+				"HEAD_US	statement"
+			],
+			[
+				"Head",
+				"HEAD_ARR	statement"
+			],
+			[
+				"DIA",
+				"DIA	statement"
+			],
+			[
+				"PI",
+				"pi	instance"
+			],
+			[
+				"ELEV",
+				"ELEV_DS	statement"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"contents": "\"\"\" Method of Characteristics\n-Derivation from Bruce Thomson class notes (UNM CE540)\n-upstream (EOT) is always assumed to be the problem datum (elev=0)\n\n\"\"\"\n\nimport numpy as np\nimport matplotlib.pyplot as plt\nimport sys\nsys.path.append('/Users/Lampe/PyScripts/surgeAnalysis')\nimport SurgeFunc as sf\n# import pdb\n\n# RUNS ON PYTHON VERSION 2.7+\n# print(sys.version_info)\nnp.set_printoptions(precision=4)\n\n\ndef valprint(string, value):\n    \"\"\" Ensure uniform formatting of scalar value outputs. \"\"\"\n    print(\"{0:>30}: {1: .6e}\".format(string, value))\n\n\ndef matprint(string, value):\n    \"\"\" Ensure uniform formatting of matrix value outputs. \"\"\"\n    print(\"{0}:\".format(string))\n    print(value)\n\n# Problem Data\nTIME_CLOSE = 30  # SECONDS (VALVE CLOSURE DURATION)\nTIME = 90  # SECONDS OF ANALYSIS\nLENGTH = 3.e3  # FEET (PIPE LENGTH)\nDIA_IN = 10.0  # INCH (INNER DIAMETER)\nWAVE_SPEED = 3.7E3  # FEET/SEC (SPEED OF SOUND IN FLUID)\nVEL0 = 15.0  # FEET/SEC (INITIAL FLUID VELOCITY)\nHEAD_US = 4000.0  # FEET (ELEV + PRESSURE HEADS = TOTAL HEAD AT UPSTREAM DATUM)\nTHETA = np.pi/2  # ORIENTATION OF PIPE (RADIANS: 0=HORIZ, np.pi/2=VERT)\nFRIC = 0.1  # DIMENSIONLESS DARCY-WIESBACH FRICTION FACTOR\n\n# CALCULATED VALUES\nDIA = DIA_IN / 12.0 # FEET (INNER DIAMETER OF PIPE)\n\n# GRID SPACING\nNELEM = 4\nNNODE = NELEM + 1\nDELX = LENGTH/NELEM  # FEET (NODE SPACING)\nDELT = DELX/WAVE_SPEED  # SECOND (TIME STEP)\nXGRID = np.linspace(start=0, stop=LENGTH, num=NNODE)  # SPATIAL DISC\nTGRID = np.linspace(start=0, stop=TIME, num=TIME/DELT+1)  # TEMPORAL DISC\n\n# CONSTANTS\nGRAV = 32.2  # FT/SEC2\nRHO = 1.94  # SLUGS/FT3\nGAMMA = RHO * GRAV  # LB/FT3\n\n# INITIAL CONDITIONS\nHEAD_EL = np.sin(THETA)*XGRID  # ELEVATION HEAD\nHEAD_V = VEL0**2/(2*GRAV)  # VELOCITY HEAD\nHEAD_LS = FRIC*XGRID/(2*DIA*GRAV)*VEL0**2 #  HEAD LOSS FROM FRICTION\nHEAD0 = HEAD_US - HEAD_LS  # INITIAL CONDITIONS - TOTAL HEAD\nDEPTH = HEAD_EL[::-1]\n\n# BOUNDARY CONDITIONS\nBC_US = HEAD_US  # CONSTANT HEAD AT UPSTREAM RESERVOIR\n\nVEL_DS = np.zeros(len(TGRID))\nfor i in xrange(len(VEL_DS)):\n    frac_open = 1 - TGRID[i]/TIME_CLOSE\n    if frac_open > 0:\n        VEL_DS[i] = VEL0*frac_open  # PRESCRIBED FLUX AT DOWNSTREAM\n\n# DEFINE ARRAYS TO STORE THE SOLUTION\nHEAD_ARR = np.zeros((len(XGRID), len(TGRID)))\nVEL_ARR = np.zeros((len(XGRID), len(TGRID)))\n\n# SET INITIAL CONDITIONS\nHEAD_ARR[:, 0] = HEAD0\nVEL_ARR[:, 0] = VEL0\n\n# SET BCTS\nHEAD_ARR[0, :] = HEAD_US  # UPSTREAM HEAD\nVEL_ARR[-1, :] = VEL_DS  # DOWNSTREAM VELOCITY\n\nBTERM = WAVE_SPEED/GRAV\nRTERM = FRIC*DELX/(2*GRAV*DIA)\nXROW = len(XGRID)-2  # INTERNAL SPATIAL GRID POINTS\nTCOL = len(TGRID)-1  # INTERNAL TEMPORAL GRID POINTS\n\n# BDRY TERMS AT THE FIRST TIME STEP\nbneg = BTERM + RTERM*np.abs(VEL_ARR[1, 0])\ncneg = HEAD_ARR[1, 0] - BTERM*VEL_ARR[1, 0]\nVEL_ARR[0, 1] = (HEAD_US - cneg)/bneg\n\nbpos = BTERM + RTERM*np.abs(VEL_ARR[-2, 0])\ncpos = HEAD_ARR[-2, 0] + BTERM*VEL_ARR[-2, 0]\nHEAD_ARR[-1, 1] = cpos - bpos*VEL_ARR[-1, 1]\n\nfor j in xrange(TCOL):\n    for i in xrange(XROW):  # INTERIOR NODE CALCULATIONS\n        cpos = HEAD_ARR[i, j] + BTERM*VEL_ARR[i, j]\n        cneg = HEAD_ARR[i+2, j] - BTERM*VEL_ARR[i+2, j]\n        bpos = BTERM + RTERM*np.abs(VEL_ARR[i, j])\n        bneg = BTERM + RTERM*np.abs(VEL_ARR[i+2, j])\n        HEAD_ARR[i+1, j+1] = (cpos*bneg + cneg*bpos)/(bpos+bneg)\n        VEL_ARR[i+1, j+1] = (cpos - cneg)/(bpos + bneg)\n        if i == 0:  # UPSTREAM BOUNDARY NODE - VELOCITY\n            cneg = HEAD_ARR[i+1, j] - BTERM*VEL_ARR[i+1, j]\n            bneg = BTERM + RTERM*np.abs(VEL_ARR[i+1, j])\n            VEL_ARR[i, j+1] = (HEAD_US - cneg)/bneg\n        if i == XROW-1:  # DOWNSTREAM BOUNDARY NODE - HEAD\n            cpos = HEAD_ARR[i+1, j] + BTERM*VEL_ARR[i+1, j]\n            bpos = BTERM + RTERM*np.abs(VEL_ARR[i+1, j])\n            HEAD_ARR[-1, j+1] = cpos - bpos*VEL_ARR[-1, j+1]\n\n# CALCULATE PRESSURE\nROW, COL = HEAD_ARR.shape\nPRESS = np.zeros((ROW, COL))\nfor i in xrange(COL):\n    PRESS[:, i] = (HEAD_ARR[:, i] - HEAD_EL - VEL_ARR[:, i]**2/(2*GRAV))\\\n                 * GAMMA/144.0\n\n\n# BUILD ARRAYS FOR PLOTTING\ntime_plot = np.tile(TGRID, (NNODE, 1)).T\nx_plot = np.tile(XGRID, (COL, 1)).T\nPATH = '/Users/Lampe/Documents/PB/SurgeAnalysis/Results/'\n\nLBL = [None]*ROW\nfor i in xrange(ROW):\n    LBL[i] = \"Depth: {:,.0f} ft\".format(DEPTH[i])\n\nFIG1, AX1 = plt.subplots(figsize=(12, 8))\nAX1.plot(time_plot, VEL_ARR.T, 'o--')\nAX1.grid(True)\nAX1.set_xlabel(\"Time (sec)\")\nAX1.set_ylabel(\"Fluid Velocity (ft/sec)\")\nAX1.legend(LBL, frameon=1, framealpha=1, loc=0)\nFIG1_NAME = 'fig_velocity.pdf'\n# FIG1.savefig(PATH + FIG1_NAME)\n\nFIG2, AX2 = plt.subplots(figsize=(12, 8))\nAX2.plot(time_plot, PRESS.T, 'o--')\nAX2.grid(True)\nAX2.set_xlabel(\"Time (sec)\")\nAX2.set_ylabel(\"Pressure (psi)\")\nAX2.legend(LBL, frameon=1, framealpha=1, loc=1)\nFIG2_NAME = 'fig_head.pdf'\n# FIG2.savefig(PATH + FIG2_NAME)\n\nplt.show()",
+			"file": "MethodOfChar01.py",
+			"file_size": 4721,
+			"file_write_time": 130979801670000000,
+			"settings":
+			{
+				"buffer_size": 4806,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "SurgeFunc.py",
+			"settings":
+			{
+				"buffer_size": 11966,
+				"line_ending": "Unix"
+			}
+		}
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+		[
+			[
+				[
+					"Packages/Python/Python.sublime-build",
+					""
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					"Syntax Check"
+				]
+			],
+			[
+				"Packages/Python/Python.sublime-build",
+				""
+			]
+		]
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 307.0,
+		"last_filter": "v",
+		"selected_items":
+		[
+			[
+				"v",
+				"Virtualenv: Activate"
+			],
+			[
+				"virtualenv: d",
+				"Virtualenv: Add directory"
+			],
+			[
+				"virtual",
+				"Virtualenv: Activate"
+			],
+			[
+				"insta",
+				"Package Control: Install Package"
+			],
+			[
+				"install",
+				"Package Control: Install Package"
+			],
+			[
+				"instal",
+				"Package Control: Install Package"
+			],
+			[
+				"lat",
+				"Set Syntax: LaTeX Beamer"
+			],
+			[
+				"pack",
+				"Package Control: Add Repository"
+			],
+			[
+				"inst",
+				"Package Control: Install Package"
+			],
+			[
+				"sublimelinter",
+				"SublimeLinter: Enable Linting"
+			]
+		],
+		"width": 593.0
+	},
+	"console":
+	{
+		"height": 660.0,
+		"history":
+		[
+			"view.settings()",
+			"view.settings().get('font_face')",
+			"import urllib.request,os,hashlib; h = 'eb2297e1a458f27d836c04bb0cbaf282' + 'd0e7a3098092775ccb37ca9d6b2e4b7d'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest(); print('Error validating download (got %s instead of %s), please try manual install' % (dh, h)) if dh != h else open(os.path.join( ipp, pf), 'wb' ).write(by)"
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/Users/Lampe/PyScripts/surgeAnalysis"
+	],
+	"file_history":
+	[
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/User/SublimeLinter.sublime-settings",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/User/Preferences.sublime-settings",
+		"/Users/Lampe/PyScripts/surgeAnalysis/MethodOfChar01.py",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/SublimeLinter/SublimeLinter.sublime-settings",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/User/Python.sublime-settings",
+		"/Users/Lampe/PyScripts/surgeAnalysis/SurgeFunc01.py",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/Default/Preferences.sublime-settings",
+		"/Users/Lampe/PyScripts/surgeAnalysis/SurgeAnalysis.sublime-project",
+		"/Users/Lampe/PyScripts/surgeAnalysis/Method_Char_01",
+		"/Users/Lampe/Dropbox/UNM NEUP/README.txt",
+		"/Users/Lampe/PyScripts/CS_Research/ReportLab/TestSubl.py",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/Virtualenv/README.md",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/User/Virtualenv.sublime-settings",
+		"/Users/Lampe/PyScripts/CS_Research/ReportLab/Reports.sublime-project",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/Anaconda/Anaconda.sublime-settings",
+		"/Users/Lampe/.bash_profile",
+		"/Users/Lampe/PyScripts/CS_Research/README.md",
+		"/Users/Lampe/GrantNo456417/Derivations/Perm_PFO/Deriv_PressureFalloff_gas.tex",
+		"/Users/Lampe/PyScripts/CS_Research/ResearchFunc.py",
+		"/Users/Lampe/Documents/UNM_Courses/ME-500/HW05/latex/HW5_Template.tex",
+		"/Users/Lampe/PyScripts/CS_Research/Perm/perm_dat.csv",
+		"/Users/Lampe/Documents/PB/Keyera_2C_MIT/Memo/Discussion_2CMIT.tex",
+		"/Users/Lampe/LaTex_Files/texMemo (A Simple Memo Class)/texMemo-example.tex",
+		"/Users/Lampe/LaTex_Files/ClassLocation.md",
+		"/Users/Lampe/PyScripts/surgeAnalysis/SurgeFunc.py",
+		"/Users/Lampe/Downloads/Derive_SecondOrderApprox (1)/Derive_SecondOrderApprox.md",
+		"/Users/Lampe/PyScripts/blfunc.py",
+		"/Users/Lampe/PyScripts/blstress.py",
+		"/Users/Lampe/PyScripts/SurgeFunc.py",
+		"/Users/Lampe/PyScripts/JSAnimation/README.md",
+		"/Users/Lampe/.zshrc",
+		"/Users/Lampe/Downloads/julia-0.4.1.md5",
+		"/Users/Lampe/GrantNo456417/CurrentTesting/CrushedSaltRepo/README.md",
+		"/Users/Lampe/PyScripts/surgeAnalysis/README.md",
+		"/Users/Lampe/Desktop/testSubMarkdown.md",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/Markdown Preview/MarkdownPreview.sublime-settings",
+		"/Users/Lampe/.bashrc",
+		"/Users/Lampe/GitHub/BLscripts/blstress.py",
+		"/Users/Lampe/Documents/UNM_Courses/README.md",
+		"/Users/Lampe/GitHub/BLscripts/blfunc.py",
+		"/Users/Lampe/Documents/DocToRead/Theology/GeneV/letter_yesVirginia.tex",
+		"/Users/Lampe/Documents/Misc/Career Planning/Resume_latex/SMRI_ResearchCom/lampe_letter.tex",
+		"/Users/Lampe/Documents/UNM_Courses/ME-500/HW04/Latex/HW_Template.tex",
+		"/Users/Lampe/Desktop/bash_commands.txt",
+		"/Users/Lampe/Pandoc/test1.tex",
+		"/Users/Lampe/PyScripts/BCL_pint_default_en.txt",
+		"/Users/Lampe/Documents/Misc/Career Planning/Resume_latex/SMRI_ResearchCom/lampe_CV.tex",
+		"/Users/Lampe/Documents/Misc/Career Planning/Resume_latex/let9b.tex",
+		"/Users/Lampe/Documents/Misc/Career Planning/Resume_latex/res9a.tex",
+		"/Users/Lampe/Documents/Misc/Career Planning/Resume_latex/TestBib/TestBib.tex",
+		"/Users/Lampe/Documents/UNM_Courses/CE-598/HW08/Latex/HW_Template.tex",
+		"/Users/Lampe/Documents/UNM_Courses/HW_Template.tex",
+		"/Users/Lampe/Documents/CUResearch/SpecTRoM45/SP45-202.FOR",
+		"/Users/Lampe/PyScripts/blfunc.pyc",
+		"/Users/Lampe/Documents/UNM_Courses/CE-598/HW07/Latex/HW07_lampe.tex",
+		"/Users/Lampe/Documents/UNM_Courses/CE-598/HW06/latex/CE598_HW06_lampe.tex",
+		"/Users/Lampe/GrantNo456417/CurrentTesting/HypotheticalBiotsCoef/BiotAnalysis_lampe.tex",
+		"/Users/Lampe/Documents/Misc/Career Planning/Resume_latex/Professional CV/cv.tex",
+		"/Users/Lampe/Documents/UNM_Courses/ME-500/HW03/latex/HW_Template.tex",
+		"/Users/Lampe/Documents/UNM_Courses/CBE-521/Exam01/latex/CBE521_Exam01.tex",
+		"/Users/Lampe/Documents/UNM_Courses/ME-500/Definitions/Definitions_FirstTest.tex",
+		"/Users/Lampe/Desktop/res.cls",
+		"/Users/Lampe/Documents/Misc/Career Planning/Resume_latex/resume.cls",
+		"/Users/Lampe/Documents/UNM_Courses/CBE-521/HW02/latex/prob3.tex",
+		"/Users/Lampe/GrantNo456417/Presentations/2015-09-18_Perm01/Beamer_Lampe_Perm01.tex",
+		"/Users/Lampe/GrantNo456417/Presentations/2015-09-18_Perm01/beamerTemp.tex",
+		"/Users/Lampe/GrantNo456417/Presentations/2015-09-18_Perm01/Beamer_Lampe_Perm01.toc",
+		"/Users/Lampe/GrantNo456417/Presentations/2015-09-18_Perm01/Lampe_Perm01.txt",
+		"/2015-09-18.sublime-project",
+		"/Users/Lampe/LaTex_Files/sublimeTest/ResearchNotes_BCL.tex",
+		"/Users/Lampe/PyScripts/sublimeTest_01.py",
+		"/Users/Lampe/Downloads/HW01.py",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/User/Python.sublime-build",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/User/Side Bar.sublime-settings"
+	],
+	"find":
+	{
+		"height": 35.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"python",
+			"path",
+			"figure",
+			"less",
+			"dimensionless",
+			"figure",
+			"listing",
+			"ode2",
+			"section"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": true,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 1,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "MethodOfChar01.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 4806,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								859,
+								859
+							]
+						],
+						"settings":
+						{
+							"BracketHighlighterBusy": false,
+							"auto_complete": false,
+							"bh_regions":
+							[
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content"
+							],
+							"spell_check": false,
+							"syntax": "Packages/Python/Python.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 215.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "SurgeFunc.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 11966,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1418,
+								1418
+							]
+						],
+						"settings":
+						{
+							"BracketHighlighterBusy": false,
+							"bh_regions":
+							[
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content"
+							],
+							"syntax": "Packages/Python/Python.tmLanguage",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 8.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 23.0
+	},
+	"input":
+	{
+		"height": 31.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 258.0
+	},
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"output.markdown":
+	{
+		"height": 100.0
+	},
+	"pinned_build_system": "Packages/Virtualenv/Python + Virtualenv.sublime-build",
+	"project": "SurgeAnalysis.sublime-project",
+	"replace":
+	{
+		"height": 42.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 500.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"",
+				"~/GrantNo456417/Presentations/2015-09-18_Perm01/PermPres_01.sublime-project"
+			]
+		],
+		"width": 380.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 191.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
