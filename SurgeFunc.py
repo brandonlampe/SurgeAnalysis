@@ -205,3 +205,41 @@ def compressibility(temp_f, press_psig, fluid):
     return comp_psi
 
 
+def DBrine(temp_f, psi):
+    """calculates density of saturated brine [g/cc]
+
+    'Equations from:
+    '   External Memo
+    '   Sandia National Laboratories
+    '   Albuquerque, New Mexico 87185
+    '   September 19, 1989
+    '   from: J.L. Todd, 6257
+    '   to:  J.K. Linn, 6257
+    'Subject: Saturated Brine - Compressibility and Coefficient
+                                 of Thermal Expansion
+    """
+
+    temp_c = (temp_f - 32.0) * 5. / 9.  # degrees C
+    p_atm = psi / 14.69595  # Atmospheres
+    dbrine = 1.2089 - ((0.000586 * temp_c) + (0.000004 * temp_c**2) -
+                       (0.0000000171 * temp_c**3) + 0.000051 * p_atm)
+    return dbrine
+
+
+def CompBrine(temp_f, psi):
+    """
+    calculates Compressibility of saturated brine at constant
+        temperature [1/psi]
+
+    'Equations from:
+    '   External Memo
+    '   Sandia National Laboratories
+    '   Albuquerque, New Mexico 87185
+    '   September 19, 1989
+    '   from: J.L. Todd, 6257
+    '   to:  J.K. Linn, 6257
+    'Subject: Saturated Brine - Compressibility and Coefficient
+                                of Thermal Expansion
+    """
+    comp_brine_psi = (0.000051 / DBrine(temp_f, psi)) / 14.69595  # 1/psi
+    return comp_brine_psi
