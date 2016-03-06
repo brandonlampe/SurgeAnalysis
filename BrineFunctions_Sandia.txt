@@ -1,0 +1,103 @@
+Attribute VB_Name = "BrineFunc_Sandia"
+Function DBrine(Temp_F As Double, Psi As Double)
+    'calculates density of saturated brine [g/cc]
+    
+    'Equations from:
+    '   External Memo
+    '   Sandia National Laboratories
+    '   Albuquerque, New Mexico 87185
+    '   September 19, 1989
+    '   from: J.L. Todd, 6257
+    '   to:  J.K. Linn, 6257
+    
+    'Subject: Saturated Brine - Compressibility and Coefficient of Thermal Expansion
+
+    Dim T As Double
+    Dim P As Double
+    
+    T = (Temp_F - 32) * 5 / 9 'degrees C
+    P = Psi / 14.69595 'Atmospheres
+
+    DBrine = 1.2089 - 0.000586 * T + 0.000004 * T ^ 2 - 0.0000000171 * T ^ 3 + 0.000051 * P
+    
+End Function
+
+Function MolBrine(Temp_F As Double, Psi As Double)
+    'calculates Molality of Saturated Brine: mols of NaCl/Mass of H2O
+
+    'Equations from:
+    '   External Memo
+    '   Sandia National Laboratories
+    '   Albuquerque, New Mexico 87185
+    '   September 19, 1989
+    '   from: J.L. Todd, 6257
+    '   to:  J.K. Linn, 6257
+    
+    'Subject: Saturated Brine - Compressibility and Coefficient of Thermal Expansion
+
+    Dim T As Double
+    Dim P As Double
+    
+    T = (Temp_F - 32) * 5 / 9 'degrees C
+    P = Psi / 14.69595 'Atmospheres
+    
+    MolBrine = 6.104 + 0.001954 * T + 0.00004722 * T ^ 2 + 0.00020188 * (P - 1)
+
+End Function
+Function DH2O(Temp_F As Double, Psi As Double)
+    'calculates Density of Water [g/cc]
+
+    'Equations from:
+    '   External Memo
+    '   Sandia National Laboratories
+    '   Albuquerque, New Mexico 87185
+    '   September 19, 1989
+    '   from: J.L. Todd, 6257
+    '   to:  J.K. Linn, 6257
+    
+    'Subject: Saturated Brine - Compressibility and Coefficient of Thermal Expansion
+
+    Dim T As Double
+    Dim P As Double
+    
+    T = (Temp_F - 32) * 5 / 9 'degrees C
+    P = Psi / 14.69595 'Atmospheres
+    
+    DH2O = 0.99981 + 0.0000201 * T - 0.0000059 * T ^ 2 + 0.0000000161 * T ^ 3 + 0.000043 * (P - 1)
+
+End Function
+Function CompBrine(Temp_F As Double, Psi As Double)
+    'calculates Compressibility of saturated brine at constant temperature [1/psi]
+    
+    'Equations from:
+    '   External Memo
+    '   Sandia National Laboratories
+    '   Albuquerque, New Mexico 87185
+    '   September 19, 1989
+    '   from: J.L. Todd, 6257
+    '   to:  J.K. Linn, 6257
+    
+    'Subject: Saturated Brine - Compressibility and Coefficient of Thermal Expansion
+
+    CompBrine = (0.000051 / DBrine(Temp_F, Psi)) / 14.69595
+
+End Function
+Function TExpBrine(Temp_F As Double, Psi As Double)
+    'calculates Thermal Expansion of saturated brine at constant pressure [1/F]
+    
+    'Equations from:
+    '   External Memo
+    '   Sandia National Laboratories
+    '   Albuquerque, New Mexico 87185
+    '   September 19, 1989
+    '   from: J.L. Todd, 6257
+    '   to:  J.K. Linn, 6257
+    
+    'Subject: Saturated Brine - Compressibility and Coefficient of Thermal Expansion
+
+    Dim T As Double
+          
+    T = (Temp_F - 32) * 5 / 9 'degrees C
+    TExpBrine = ((0.000586 - 0.000008 * T + 0.0000000513 * T ^ 2) / DBrine(Temp_F, Psi)) * (5 / 9)
+
+End Function

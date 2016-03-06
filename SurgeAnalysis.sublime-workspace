@@ -4,6 +4,14 @@
 		"selected_items":
 		[
 			[
+				"com",
+				"CompBrine	function"
+			],
+			[
+				"d",
+				"DBrine	function"
+			],
+			[
 				"fig",
 				"figsize"
 			],
@@ -32,13 +40,26 @@
 	"buffers":
 	[
 		{
-			"contents": "\"\"\" Method of Characteristics\n-Derivation from Bruce Thomson class notes (UNM CE540)\n-upstream (EOT) is always assumed to be the problem datum (elev=0)\n\n\"\"\"\n\nimport numpy as np\nimport matplotlib.pyplot as plt\nimport sys\nsys.path.append('/Users/Lampe/PyScripts/surgeAnalysis')\nimport SurgeFunc as sf\n# import pdb\n\n# RUNS ON PYTHON VERSION 2.7+\n# print(sys.version_info)\nnp.set_printoptions(precision=4)\n\n\ndef valprint(string, value):\n    \"\"\" Ensure uniform formatting of scalar value outputs. \"\"\"\n    print(\"{0:>30}: {1: .6e}\".format(string, value))\n\n\ndef matprint(string, value):\n    \"\"\" Ensure uniform formatting of matrix value outputs. \"\"\"\n    print(\"{0}:\".format(string))\n    print(value)\n\n# Problem Data\nTIME_CLOSE = 30  # SECONDS (VALVE CLOSURE DURATION)\nTIME = 90  # SECONDS OF ANALYSIS\nLENGTH = 3.e3  # FEET (PIPE LENGTH)\nDIA_IN = 10.0  # INCH (INNER DIAMETER)\nWAVE_SPEED = 3.7E3  # FEET/SEC (SPEED OF SOUND IN FLUID)\nVEL0 = 15.0  # FEET/SEC (INITIAL FLUID VELOCITY)\nHEAD_US = 4000.0  # FEET (ELEV + PRESSURE HEADS = TOTAL HEAD AT UPSTREAM DATUM)\nTHETA = np.pi/2  # ORIENTATION OF PIPE (RADIANS: 0=HORIZ, np.pi/2=VERT)\nFRIC = 0.1  # DIMENSIONLESS DARCY-WIESBACH FRICTION FACTOR\n\n# CALCULATED VALUES\nDIA = DIA_IN / 12.0 # FEET (INNER DIAMETER OF PIPE)\n\n# GRID SPACING\nNELEM = 4\nNNODE = NELEM + 1\nDELX = LENGTH/NELEM  # FEET (NODE SPACING)\nDELT = DELX/WAVE_SPEED  # SECOND (TIME STEP)\nXGRID = np.linspace(start=0, stop=LENGTH, num=NNODE)  # SPATIAL DISC\nTGRID = np.linspace(start=0, stop=TIME, num=TIME/DELT+1)  # TEMPORAL DISC\n\n# CONSTANTS\nGRAV = 32.2  # FT/SEC2\nRHO = 1.94  # SLUGS/FT3\nGAMMA = RHO * GRAV  # LB/FT3\n\n# INITIAL CONDITIONS\nHEAD_EL = np.sin(THETA)*XGRID  # ELEVATION HEAD\nHEAD_V = VEL0**2/(2*GRAV)  # VELOCITY HEAD\nHEAD_LS = FRIC*XGRID/(2*DIA*GRAV)*VEL0**2 #  HEAD LOSS FROM FRICTION\nHEAD0 = HEAD_US - HEAD_LS  # INITIAL CONDITIONS - TOTAL HEAD\nDEPTH = HEAD_EL[::-1]\n\n# BOUNDARY CONDITIONS\nBC_US = HEAD_US  # CONSTANT HEAD AT UPSTREAM RESERVOIR\n\nVEL_DS = np.zeros(len(TGRID))\nfor i in xrange(len(VEL_DS)):\n    frac_open = 1 - TGRID[i]/TIME_CLOSE\n    if frac_open > 0:\n        VEL_DS[i] = VEL0*frac_open  # PRESCRIBED FLUX AT DOWNSTREAM\n\n# DEFINE ARRAYS TO STORE THE SOLUTION\nHEAD_ARR = np.zeros((len(XGRID), len(TGRID)))\nVEL_ARR = np.zeros((len(XGRID), len(TGRID)))\n\n# SET INITIAL CONDITIONS\nHEAD_ARR[:, 0] = HEAD0\nVEL_ARR[:, 0] = VEL0\n\n# SET BCTS\nHEAD_ARR[0, :] = HEAD_US  # UPSTREAM HEAD\nVEL_ARR[-1, :] = VEL_DS  # DOWNSTREAM VELOCITY\n\nBTERM = WAVE_SPEED/GRAV\nRTERM = FRIC*DELX/(2*GRAV*DIA)\nXROW = len(XGRID)-2  # INTERNAL SPATIAL GRID POINTS\nTCOL = len(TGRID)-1  # INTERNAL TEMPORAL GRID POINTS\n\n# BDRY TERMS AT THE FIRST TIME STEP\nbneg = BTERM + RTERM*np.abs(VEL_ARR[1, 0])\ncneg = HEAD_ARR[1, 0] - BTERM*VEL_ARR[1, 0]\nVEL_ARR[0, 1] = (HEAD_US - cneg)/bneg\n\nbpos = BTERM + RTERM*np.abs(VEL_ARR[-2, 0])\ncpos = HEAD_ARR[-2, 0] + BTERM*VEL_ARR[-2, 0]\nHEAD_ARR[-1, 1] = cpos - bpos*VEL_ARR[-1, 1]\n\nfor j in xrange(TCOL):\n    for i in xrange(XROW):  # INTERIOR NODE CALCULATIONS\n        cpos = HEAD_ARR[i, j] + BTERM*VEL_ARR[i, j]\n        cneg = HEAD_ARR[i+2, j] - BTERM*VEL_ARR[i+2, j]\n        bpos = BTERM + RTERM*np.abs(VEL_ARR[i, j])\n        bneg = BTERM + RTERM*np.abs(VEL_ARR[i+2, j])\n        HEAD_ARR[i+1, j+1] = (cpos*bneg + cneg*bpos)/(bpos+bneg)\n        VEL_ARR[i+1, j+1] = (cpos - cneg)/(bpos + bneg)\n        if i == 0:  # UPSTREAM BOUNDARY NODE - VELOCITY\n            cneg = HEAD_ARR[i+1, j] - BTERM*VEL_ARR[i+1, j]\n            bneg = BTERM + RTERM*np.abs(VEL_ARR[i+1, j])\n            VEL_ARR[i, j+1] = (HEAD_US - cneg)/bneg\n        if i == XROW-1:  # DOWNSTREAM BOUNDARY NODE - HEAD\n            cpos = HEAD_ARR[i+1, j] + BTERM*VEL_ARR[i+1, j]\n            bpos = BTERM + RTERM*np.abs(VEL_ARR[i+1, j])\n            HEAD_ARR[-1, j+1] = cpos - bpos*VEL_ARR[-1, j+1]\n\n# CALCULATE PRESSURE\nROW, COL = HEAD_ARR.shape\nPRESS = np.zeros((ROW, COL))\nfor i in xrange(COL):\n    PRESS[:, i] = (HEAD_ARR[:, i] - HEAD_EL - VEL_ARR[:, i]**2/(2*GRAV))\\\n                 * GAMMA/144.0\n\n\n# BUILD ARRAYS FOR PLOTTING\ntime_plot = np.tile(TGRID, (NNODE, 1)).T\nx_plot = np.tile(XGRID, (COL, 1)).T\nPATH = '/Users/Lampe/Documents/PB/SurgeAnalysis/Results/'\n\nLBL = [None]*ROW\nfor i in xrange(ROW):\n    LBL[i] = \"Depth: {:,.0f} ft\".format(DEPTH[i])\n\nFIG1, AX1 = plt.subplots(figsize=(12, 8))\nAX1.plot(time_plot, VEL_ARR.T, 'o--')\nAX1.grid(True)\nAX1.set_xlabel(\"Time (sec)\")\nAX1.set_ylabel(\"Fluid Velocity (ft/sec)\")\nAX1.legend(LBL, frameon=1, framealpha=1, loc=0)\nFIG1_NAME = 'fig_velocity.pdf'\n# FIG1.savefig(PATH + FIG1_NAME)\n\nFIG2, AX2 = plt.subplots(figsize=(12, 8))\nAX2.plot(time_plot, PRESS.T, 'o--')\nAX2.grid(True)\nAX2.set_xlabel(\"Time (sec)\")\nAX2.set_ylabel(\"Pressure (psi)\")\nAX2.legend(LBL, frameon=1, framealpha=1, loc=1)\nFIG2_NAME = 'fig_head.pdf'\n# FIG2.savefig(PATH + FIG2_NAME)\n\nplt.show()",
 			"file": "MethodOfChar01.py",
-			"file_size": 4721,
-			"file_write_time": 130979801670000000,
 			"settings":
 			{
-				"buffer_size": 4806,
+				"buffer_size": 8262,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/Users/Lampe/Documents/PB/SMRI/2016SP_SurgeAnalysis/Paper/abstract_SMRI_2016SP_Lampe.tex",
+			"settings":
+			{
+				"buffer_size": 2585,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "speedOfSound_brine.py",
+			"settings":
+			{
+				"buffer_size": 1070,
 				"line_ending": "Unix"
 			}
 		},
@@ -46,7 +67,7 @@
 			"file": "SurgeFunc.py",
 			"settings":
 			{
-				"buffer_size": 11966,
+				"buffer_size": 8068,
 				"line_ending": "Unix"
 			}
 		}
@@ -146,6 +167,8 @@
 	],
 	"file_history":
 	[
+		"/Users/Lampe/Documents/PB/SMRI/2016SP_SurgeAnalysis/Paper/abstract_SMRI_2016SP_Lampe.tex",
+		"/Users/Lampe/PyScripts/surgeAnalysis/speedOfSound_brine.py",
 		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/User/SublimeLinter.sublime-settings",
 		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/User/Preferences.sublime-settings",
 		"/Users/Lampe/PyScripts/surgeAnalysis/MethodOfChar01.py",
@@ -272,84 +295,88 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 4806,
+						"buffer_size": 8262,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								859,
-								859
+								1080,
+								1080
 							]
 						],
 						"settings":
 						{
 							"BracketHighlighterBusy": false,
+							"WordCountShouldRun": false,
+							"WordCountSyntax": "python",
 							"auto_complete": false,
 							"bh_regions":
 							[
-								"bh_default",
-								"bh_default_center",
-								"bh_default_open",
-								"bh_default_close",
-								"bh_default_content",
-								"bh_regex",
-								"bh_regex_center",
-								"bh_regex_open",
-								"bh_regex_close",
-								"bh_regex_content",
-								"bh_angle",
-								"bh_angle_center",
-								"bh_angle_open",
-								"bh_angle_close",
-								"bh_angle_content",
-								"bh_single_quote",
-								"bh_single_quote_center",
-								"bh_single_quote_open",
-								"bh_single_quote_close",
-								"bh_single_quote_content",
-								"bh_round",
-								"bh_round_center",
-								"bh_round_open",
-								"bh_round_close",
-								"bh_round_content",
-								"bh_c_define",
-								"bh_c_define_center",
-								"bh_c_define_open",
-								"bh_c_define_close",
-								"bh_c_define_content",
 								"bh_curly",
 								"bh_curly_center",
 								"bh_curly_open",
 								"bh_curly_close",
 								"bh_curly_content",
-								"bh_square",
-								"bh_square_center",
-								"bh_square_open",
-								"bh_square_close",
-								"bh_square_content",
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
 								"bh_double_quote",
 								"bh_double_quote_center",
 								"bh_double_quote_open",
 								"bh_double_quote_close",
 								"bh_double_quote_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
 								"bh_unmatched",
 								"bh_unmatched_center",
 								"bh_unmatched_open",
 								"bh_unmatched_close",
 								"bh_unmatched_content",
-								"bh_tag",
-								"bh_tag_center",
-								"bh_tag_open",
-								"bh_tag_close",
-								"bh_tag_content"
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content"
 							],
 							"spell_check": false,
-							"syntax": "Packages/Python/Python.tmLanguage"
+							"syntax": "Packages/Python/Python.tmLanguage",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 215.0,
+						"translation.y": 687.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 1,
@@ -357,36 +384,126 @@
 				},
 				{
 					"buffer": 1,
-					"file": "SurgeFunc.py",
+					"file": "/Users/Lampe/Documents/PB/SMRI/2016SP_SurgeAnalysis/Paper/abstract_SMRI_2016SP_Lampe.tex",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 11966,
+						"buffer_size": 2585,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								1418,
-								1418
+								1233,
+								1233
 							]
 						],
 						"settings":
 						{
 							"BracketHighlighterBusy": false,
+							"WordCountShouldRun": true,
+							"WordCountSyntax": "latex",
 							"bh_regions":
 							[
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
 								"bh_default",
 								"bh_default_center",
 								"bh_default_open",
 								"bh_default_close",
 								"bh_default_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
 								"bh_regex",
 								"bh_regex_center",
 								"bh_regex_open",
 								"bh_regex_close",
 								"bh_regex_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content"
+							],
+							"syntax": "Packages/LaTeX/LaTeX.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "speedOfSound_brine.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1070,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								579,
+								695
+							]
+						],
+						"settings":
+						{
+							"BracketHighlighterBusy": false,
+							"WordCountSyntax": "python",
+							"bh_regions":
+							[
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
 								"bh_angle",
 								"bh_angle_center",
 								"bh_angle_open",
@@ -397,51 +514,140 @@
 								"bh_single_quote_open",
 								"bh_single_quote_close",
 								"bh_single_quote_content",
-								"bh_round",
-								"bh_round_center",
-								"bh_round_open",
-								"bh_round_close",
-								"bh_round_content",
-								"bh_c_define",
-								"bh_c_define_center",
-								"bh_c_define_open",
-								"bh_c_define_close",
-								"bh_c_define_content",
-								"bh_curly",
-								"bh_curly_center",
-								"bh_curly_open",
-								"bh_curly_close",
-								"bh_curly_content",
 								"bh_square",
 								"bh_square_center",
 								"bh_square_open",
 								"bh_square_close",
 								"bh_square_content",
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
 								"bh_double_quote",
 								"bh_double_quote_center",
 								"bh_double_quote_open",
 								"bh_double_quote_close",
 								"bh_double_quote_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content",
 								"bh_unmatched",
 								"bh_unmatched_center",
 								"bh_unmatched_open",
 								"bh_unmatched_close",
 								"bh_unmatched_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content"
+							],
+							"syntax": "Packages/Python/Python.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 72.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "SurgeFunc.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 8068,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								8041,
+								8038
+							]
+						],
+						"settings":
+						{
+							"BracketHighlighterBusy": false,
+							"WordCountSyntax": "python",
+							"auto_complete": false,
+							"bh_regions":
+							[
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
 								"bh_tag",
 								"bh_tag_center",
 								"bh_tag_open",
 								"bh_tag_close",
-								"bh_tag_content"
+								"bh_tag_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content"
 							],
 							"syntax": "Packages/Python/Python.tmLanguage",
 							"tab_size": 4,
 							"translate_tabs_to_spaces": true
 						},
-						"translation.x": 8.0,
-						"translation.y": 0.0,
+						"translation.x": 0.0,
+						"translation.y": 191.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 0,
+					"stack_index": 3,
 					"type": "text"
 				}
 			]
@@ -490,7 +696,7 @@
 	{
 		"height": 100.0
 	},
-	"pinned_build_system": "Packages/Virtualenv/Python + Virtualenv.sublime-build",
+	"pinned_build_system": "Packages/LaTeXTools/LaTeX.sublime-build",
 	"project": "SurgeAnalysis.sublime-project",
 	"replace":
 	{
@@ -536,7 +742,7 @@
 	"show_open_files": true,
 	"show_tabs": true,
 	"side_bar_visible": true,
-	"side_bar_width": 191.0,
+	"side_bar_width": 265.0,
 	"status_bar_visible": true,
 	"template_settings":
 	{

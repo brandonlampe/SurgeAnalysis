@@ -1,0 +1,376 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"no",
+				"nopython"
+			],
+			[
+				"WAVE",
+				"WAVE_SPEED	statement"
+			],
+			[
+				"WALL",
+				"WALL_THICK	statement"
+			],
+			[
+				"u",
+				"unit_weight	function"
+			],
+			[
+				"Props",
+				"PropsSI	function"
+			],
+			[
+				"fig",
+				"figsize"
+			],
+			[
+				"HEAD_",
+				"HEAD_US	statement"
+			],
+			[
+				"Head",
+				"HEAD_ARR	statement"
+			],
+			[
+				"DIA",
+				"DIA	statement"
+			],
+			[
+				"PI",
+				"pi	instance"
+			],
+			[
+				"ELEV",
+				"ELEV_DS	statement"
+			]
+		]
+	},
+	"buffers":
+	[
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+		[
+			[
+				[
+					"Packages/Python/Python.sublime-build",
+					""
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					"Syntax Check"
+				]
+			],
+			[
+				"Packages/Python/Python.sublime-build",
+				""
+			]
+		]
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 392.0,
+		"last_filter": "insta",
+		"selected_items":
+		[
+			[
+				"insta",
+				"Package Control: Install Package"
+			],
+			[
+				"v",
+				"Virtualenv: Activate"
+			],
+			[
+				"virtualenv: d",
+				"Virtualenv: Add directory"
+			],
+			[
+				"virtual",
+				"Virtualenv: Activate"
+			],
+			[
+				"install",
+				"Package Control: Install Package"
+			],
+			[
+				"instal",
+				"Package Control: Install Package"
+			],
+			[
+				"lat",
+				"Set Syntax: LaTeX Beamer"
+			],
+			[
+				"pack",
+				"Package Control: Add Repository"
+			],
+			[
+				"inst",
+				"Package Control: Install Package"
+			],
+			[
+				"sublimelinter",
+				"SublimeLinter: Enable Linting"
+			]
+		],
+		"width": 518.0
+	},
+	"console":
+	{
+		"height": 660.0,
+		"history":
+		[
+			"view.settings()",
+			"view.settings().get('font_face')",
+			"import urllib.request,os,hashlib; h = 'eb2297e1a458f27d836c04bb0cbaf282' + 'd0e7a3098092775ccb37ca9d6b2e4b7d'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest(); print('Error validating download (got %s instead of %s), please try manual install' % (dh, h)) if dh != h else open(os.path.join( ipp, pf), 'wb' ).write(by)"
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/Users/Lampe/Documents/PB/SurgeAnalysis/Paper/abstract_SMRI_2016SP_Lampe.tex",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/WordCount/WordCount.sublime-settings",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/User/WordCount.sublime-settings",
+		"/Users/Lampe/Documents/PB/50782K_Keyera_2C_MIT/Memo/Discussion_2CMIT.tex",
+		"/Users/Lampe/PyScripts/surgeAnalysis/README.md",
+		"/Users/Lampe/PyScripts/surgeAnalysis/SurgeFunc.py",
+		"/Users/Lampe/PyScripts/surgeAnalysis/MethodOfChar01.py",
+		"/Users/Lampe/PyScripts/surgeAnalysis/test.py",
+		"/Users/Lampe/PyScripts/surgeAnalysis/MethodChar01.py",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/User/SublimeLinter.sublime-settings",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/User/Preferences.sublime-settings",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/SublimeLinter/SublimeLinter.sublime-settings",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/User/Python.sublime-settings",
+		"/Users/Lampe/PyScripts/surgeAnalysis/SurgeFunc01.py",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/Default/Preferences.sublime-settings",
+		"/Users/Lampe/PyScripts/surgeAnalysis/SurgeAnalysis.sublime-project",
+		"/Users/Lampe/PyScripts/surgeAnalysis/Method_Char_01",
+		"/Users/Lampe/Dropbox/UNM NEUP/README.txt",
+		"/Users/Lampe/PyScripts/CS_Research/ReportLab/TestSubl.py",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/Virtualenv/README.md",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/User/Virtualenv.sublime-settings",
+		"/Users/Lampe/PyScripts/CS_Research/ReportLab/Reports.sublime-project",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/Anaconda/Anaconda.sublime-settings",
+		"/Users/Lampe/.bash_profile",
+		"/Users/Lampe/PyScripts/CS_Research/README.md",
+		"/Users/Lampe/GrantNo456417/Derivations/Perm_PFO/Deriv_PressureFalloff_gas.tex",
+		"/Users/Lampe/PyScripts/CS_Research/ResearchFunc.py",
+		"/Users/Lampe/Documents/UNM_Courses/ME-500/HW05/latex/HW5_Template.tex",
+		"/Users/Lampe/PyScripts/CS_Research/Perm/perm_dat.csv",
+		"/Users/Lampe/Documents/PB/Keyera_2C_MIT/Memo/Discussion_2CMIT.tex",
+		"/Users/Lampe/LaTex_Files/texMemo (A Simple Memo Class)/texMemo-example.tex",
+		"/Users/Lampe/LaTex_Files/ClassLocation.md",
+		"/Users/Lampe/Downloads/Derive_SecondOrderApprox (1)/Derive_SecondOrderApprox.md",
+		"/Users/Lampe/PyScripts/blfunc.py",
+		"/Users/Lampe/PyScripts/blstress.py",
+		"/Users/Lampe/PyScripts/SurgeFunc.py",
+		"/Users/Lampe/PyScripts/JSAnimation/README.md",
+		"/Users/Lampe/.zshrc",
+		"/Users/Lampe/Downloads/julia-0.4.1.md5",
+		"/Users/Lampe/GrantNo456417/CurrentTesting/CrushedSaltRepo/README.md",
+		"/Users/Lampe/Desktop/testSubMarkdown.md",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/Markdown Preview/MarkdownPreview.sublime-settings",
+		"/Users/Lampe/.bashrc",
+		"/Users/Lampe/GitHub/BLscripts/blstress.py",
+		"/Users/Lampe/Documents/UNM_Courses/README.md",
+		"/Users/Lampe/GitHub/BLscripts/blfunc.py",
+		"/Users/Lampe/Documents/DocToRead/Theology/GeneV/letter_yesVirginia.tex",
+		"/Users/Lampe/Documents/Misc/Career Planning/Resume_latex/SMRI_ResearchCom/lampe_letter.tex",
+		"/Users/Lampe/Documents/UNM_Courses/ME-500/HW04/Latex/HW_Template.tex",
+		"/Users/Lampe/Desktop/bash_commands.txt",
+		"/Users/Lampe/Pandoc/test1.tex",
+		"/Users/Lampe/PyScripts/BCL_pint_default_en.txt",
+		"/Users/Lampe/Documents/Misc/Career Planning/Resume_latex/SMRI_ResearchCom/lampe_CV.tex",
+		"/Users/Lampe/Documents/Misc/Career Planning/Resume_latex/let9b.tex",
+		"/Users/Lampe/Documents/Misc/Career Planning/Resume_latex/res9a.tex",
+		"/Users/Lampe/Documents/Misc/Career Planning/Resume_latex/TestBib/TestBib.tex",
+		"/Users/Lampe/Documents/UNM_Courses/CE-598/HW08/Latex/HW_Template.tex",
+		"/Users/Lampe/Documents/UNM_Courses/HW_Template.tex",
+		"/Users/Lampe/Documents/CUResearch/SpecTRoM45/SP45-202.FOR",
+		"/Users/Lampe/PyScripts/blfunc.pyc",
+		"/Users/Lampe/Documents/UNM_Courses/CE-598/HW07/Latex/HW07_lampe.tex",
+		"/Users/Lampe/Documents/UNM_Courses/CE-598/HW06/latex/CE598_HW06_lampe.tex",
+		"/Users/Lampe/GrantNo456417/CurrentTesting/HypotheticalBiotsCoef/BiotAnalysis_lampe.tex",
+		"/Users/Lampe/Documents/Misc/Career Planning/Resume_latex/Professional CV/cv.tex",
+		"/Users/Lampe/Documents/UNM_Courses/ME-500/HW03/latex/HW_Template.tex",
+		"/Users/Lampe/Documents/UNM_Courses/CBE-521/Exam01/latex/CBE521_Exam01.tex",
+		"/Users/Lampe/Documents/UNM_Courses/ME-500/Definitions/Definitions_FirstTest.tex",
+		"/Users/Lampe/Desktop/res.cls",
+		"/Users/Lampe/Documents/Misc/Career Planning/Resume_latex/resume.cls",
+		"/Users/Lampe/Documents/UNM_Courses/CBE-521/HW02/latex/prob3.tex",
+		"/Users/Lampe/GrantNo456417/Presentations/2015-09-18_Perm01/Beamer_Lampe_Perm01.tex",
+		"/Users/Lampe/GrantNo456417/Presentations/2015-09-18_Perm01/beamerTemp.tex",
+		"/Users/Lampe/GrantNo456417/Presentations/2015-09-18_Perm01/Beamer_Lampe_Perm01.toc",
+		"/Users/Lampe/GrantNo456417/Presentations/2015-09-18_Perm01/Lampe_Perm01.txt",
+		"/2015-09-18.sublime-project",
+		"/Users/Lampe/LaTex_Files/sublimeTest/ResearchNotes_BCL.tex",
+		"/Users/Lampe/PyScripts/sublimeTest_01.py",
+		"/Users/Lampe/Downloads/HW01.py",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/User/Python.sublime-build",
+		"/Users/Lampe/Library/Application Support/Sublime Text 3/Packages/User/Side Bar.sublime-settings"
+	],
+	"find":
+	{
+		"height": 22.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"gamma",
+			"rho",
+			"mu",
+			"v",
+			"matprint",
+			"valprint",
+			"python",
+			"path",
+			"figure",
+			"less",
+			"dimensionless",
+			"figure",
+			"listing",
+			"ode2",
+			"section"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+			"visc",
+			"VEL"
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": true,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"sheets":
+			[
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 22.0
+	},
+	"input":
+	{
+		"height": 31.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 177.0
+	},
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"output.markdown":
+	{
+		"height": 100.0
+	},
+	"pinned_build_system": "Packages/LaTeXTools/LaTeX.sublime-build",
+	"project": "MethodOfChar01.sublime-project",
+	"replace":
+	{
+		"height": 40.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 500.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"",
+				"~/GrantNo456417/Presentations/2015-09-18_Perm01/PermPres_01.sublime-project"
+			]
+		],
+		"width": 380.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": false,
+	"side_bar_width": 62.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
